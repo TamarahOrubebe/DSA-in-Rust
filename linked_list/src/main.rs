@@ -54,7 +54,7 @@ impl TransactionLog {
                     self.head = Some(old);
                     self.length -= 1;
                 } else {
-                    self.tail = None;
+                    self.tail.take();
             }
              Rc::try_unwrap(head)
                 .ok()
