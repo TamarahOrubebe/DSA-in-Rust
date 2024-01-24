@@ -44,5 +44,21 @@ impl Iterator for ListIterator {
 
     fn next(&mut self) -> Option<String> {
         
+        let current = &self.current;
+
+        let mut result = None;
+
+        self.current = match current {
+            Some(inner_current) => {
+                let current = inner_current.borrow();
+                result = current.value.clone();
+                current.next.clone()
+
+            },
+
+            None => None
+        };
+
+        result
     }
 }
