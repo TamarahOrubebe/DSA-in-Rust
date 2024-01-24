@@ -62,3 +62,24 @@ impl Iterator for ListIterator {
         result
     }
 }
+
+impl DoubleEndedIterator for ListIterator {
+    type Item = String;
+
+    fn next_back(&mut self) -> Option<String> {
+        let current = &self.current;
+        let result = None;
+
+        self.current = match current {
+            Some(inner_current) => {
+                let current = inner_current.borrow();
+                result = current.value.clone();
+                current.prev.clone()
+            },
+
+            None => None
+        };
+
+        result
+    }
+}
