@@ -18,6 +18,16 @@ struct Node {
     prev: Link
 }
 
+impl Node {
+    fn new(value: String) -> Rc<RefCell<Node>> {
+        Rc::new(RefCell::new(Node {
+            value,
+            next: None,
+            prev: None
+        }))
+    }
+}
+
 #[derive(Debug, Clone)]
 struct BetterTransactionLog {
     head: Link,
@@ -25,9 +35,56 @@ struct BetterTransactionLog {
     length: u64
 }
 
+impl BetterTransactionLog {
+    // creating a brand new list will come in handy
+    fn new_empty_list() -> BetterTransactionLog {
+        BetterTransactionLog {
+            head: None,
+            tail: None,
+            length: 0
+        }
+    }
 
+    fn append(&mut self, value: String) {
+        let new = Node::new(value);
+
+        match self.tail.take() {
+            Some(old) => {
+                old.borrow_mut().next = Some(new.clone());
+                new.borrow_mut().prev = Some(old);
+            }
+            None => self.head = Some(new.clone())
+        }
+    
+        self.length += 1;
+        self.tail = Some(new);
+    }
+
+    fn pop(&mut self) -> Option<String> {
+
+        self.head.take().map(|head| {
+            if let Some(old) = head.borrow_mut().next.take() {
+                self.head = Some(old.clone());
+                old.borrow_mut().prev.take();
+
+            } else {
+                self.tail.take();
+            }
+
+            self.length -= 1;
+
+            Rc::try_unwrap(head)
+                .ok()
+                .expect("Something went wrong")
+                .into_inner()
+                .value
+        })
+    }
+}
+
+#[derive(Debug, Clone)]
 struct ListIterator {
-    current: List
+    current: Link
 }
 
 impl ListIterator {
@@ -49,9 +106,9 @@ impl Iterator for ListIterator {
         let mut result = None;
 
         self.current = match current {
-            Some(inner_current) => {
+            Some(ref inner_current) => {
                 let current = inner_current.borrow();
-                result = current.value.clone();
+                result = Some(current.value.clone());
                 current.next.clone()
 
             },
@@ -64,16 +121,15 @@ impl Iterator for ListIterator {
 }
 
 impl DoubleEndedIterator for ListIterator {
-    type Item = String;
 
     fn next_back(&mut self) -> Option<String> {
         let current = &self.current;
-        let result = None;
+        let mut result = None;
 
         self.current = match current {
             Some(inner_current) => {
                 let current = inner_current.borrow();
-                result = current.value.clone();
+                result = Some(current.value.clone());
                 current.prev.clone()
             },
 
@@ -82,4 +138,30 @@ impl DoubleEndedIterator for ListIterator {
 
         result
     }
+}
+
+
+fn main() {
+    let mut transaction_log = BetterTransactionLog::new_empty_list();
+ 
+    transaction_log.append("hello ".to_owned());
+    transaction_log.append("there ".to_owned());
+    transaction_log.append("how ".to_owned());
+    transaction_log.append("are ".to_owned());
+    transaction_log.append("you?".to_owned());
+    let new_log = transaction_log.clone();
+    
+    let mut transaction_log_iterator = ListIterator::new(transaction_log.head);
+    let mut iter = ListIterator::new(new_log.tail);
+    for v in transaction_log_iterator  {
+        println!("{:?}", v);
+    }
+
+    for _ in 0..5 {
+        println!("{:?}", iter.next_back())
+    }
+
+    // for _ in 0..5 {
+    //     print!("{}", transaction_log.pop().unwrap());
+    // }
 }
