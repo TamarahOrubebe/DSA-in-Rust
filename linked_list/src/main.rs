@@ -1,7 +1,8 @@
 use std::cell::RefCell;
 use std::rc::Rc;
 
-// The goal here is to use a linkedlist to implement a transaction log 
+// The goal here is to use a linkedlist to implement a transaction log
+// say of SQL statements to a database to enable recovery of the DB state
 type SingleLink = Option<Rc<RefCell<Node>>>;
 
 #[derive(Clone)]
@@ -48,18 +49,33 @@ impl TransactionLog {
     }
 
     fn pop(&mut self) -> Option<String> {
-        match self.head.take() {
-            Some(old) => {
-                    old.borrow_mut().next = self.tail;
+        self.head.take().map(|head| {
+            if let Some(old) = head.borrow_mut().next.take(){
+                    self.head = Some(old);
                     self.length -= 1;
-                }
-            
-            None => ()
-        }
+                } else {
+                    self.tail = None;
+            }
+             Rc::try_unwrap(head)
+                .ok()
+                .expect("Something went wrong")
+                .into_inner()
+                .value
+        })
     }
 }
 
 
 fn main() {
-    
+    let mut transaction_log = TransactionLog::new_empty();
+
+    transaction_log.append("hello ".to_owned());
+    transaction_log.append("there ".to_owned());
+    transaction_log.append("how ".to_owned());
+    transaction_log.append("are ".to_owned());
+    transaction_log.append("you?".to_owned());
+
+    for _ in 0..5 {
+        print!("{}", transaction_log.pop().unwrap());
+    }
 }
