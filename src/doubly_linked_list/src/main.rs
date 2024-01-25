@@ -106,7 +106,7 @@ impl Iterator for ListIterator {
         let mut result = None;
 
         self.current = match current {
-            Some(ref inner_current) => {
+            Some(inner_current) => {
                 let current = inner_current.borrow();
                 result = Some(current.value.clone());
                 current.next.clone()
